@@ -1,9 +1,9 @@
 package rest
 
 import (
-	"backend/intenal/composition"
-	"backend/intenal/transport/rest/middleware"
-	v1 "backend/intenal/transport/rest/v1"
+	"backend/internal/composition"
+	"backend/internal/transport/rest/middleware"
+	v1 "backend/internal/transport/rest/v1"
 	"backend/pkg/httpserver"
 )
 

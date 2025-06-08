@@ -1,9 +1,9 @@
 package composition
 
 import (
-	repository "backend/intenal/repo"
-	"backend/intenal/service"
-	"backend/intenal/transport/rest/v1/handlers"
+	repository "backend/internal/repo"
+	"backend/internal/service"
+	"backend/internal/transport/rest/v1/handlers"
 	"backend/pkg/postgres"
 )
 

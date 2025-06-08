@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"backend/intenal/models"
+	"backend/internal/models"
 	"backend/pkg/postgres"
 	"context"
 )

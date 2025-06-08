@@ -1,8 +1,8 @@
 package service
 
 import (
-	"backend/intenal/models"
-	repository "backend/intenal/repo"
+	"backend/internal/models"
+	repository "backend/internal/repo"
 	"context"
 )
 
