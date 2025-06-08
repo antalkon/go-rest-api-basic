@@ -2,8 +2,8 @@ package app
 
 import (
 	"backend/config"
-	"backend/intenal/composition"
-	"backend/intenal/transport/rest"
+	"backend/internal/composition"
+	"backend/internal/transport/rest"
 	"backend/pkg/httpserver"
 	"backend/pkg/logger"
 	"backend/pkg/postgres"

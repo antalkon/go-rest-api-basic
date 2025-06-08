@@ -2,7 +2,7 @@ package main
 
 import (
 	config "backend/config"
-	"backend/intenal/app"
+	"backend/internal/app"
 	"log"
 
 	"github.com/joho/godotenv"

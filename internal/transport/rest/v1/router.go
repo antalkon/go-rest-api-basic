@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"backend/intenal/transport/rest/v1/handlers"
+	"backend/internal/transport/rest/v1/handlers"
 
 	"github.com/labstack/echo/v4"
 )
