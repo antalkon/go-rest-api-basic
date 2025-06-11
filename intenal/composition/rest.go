@@ -9,14 +9,12 @@ import (
 
 type RESTModules struct {
 	PingHandler *handlers.PingHandler
+	AuthHandler *handlers.AuthHandler
 }
 
 func InitRESTModules(pg *postgres.Postgres) *RESTModules {
-	repo := repository.NewPingRepository(pg)
-	svc := service.NewPingService(repo)
-	handler := handlers.NewPingHandler(svc)
-
 	return &RESTModules{
-		PingHandler: handler,
+		PingHandler: handlers.NewPingHandler(service.NewPingService(repository.NewPingRepository(pg))),
+		AuthHandler: handlers.NewAuthHandler(service.NewAuthService(repository.NewAuthRepository(pg))),
 	}
 }

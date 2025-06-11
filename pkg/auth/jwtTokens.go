@@ -5,51 +5,55 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 const (
 	AccessTokenTTL  = 15 * time.Minute
 	RefreshTokenTTL = 7 * 24 * time.Hour
-	JwtSecretKey    = "jwtSecret"
 )
 
+var JwtSecretKey = []byte("jwtSecret") // секретный ключ для подписи
+
+// Claims структура с UUID как UserID
 type Claims struct {
-	UserID string `json:"sub"`  // ID пользователя
-	Role   string `json:"role"` // роль (опционально)
+	UserID uuid.UUID `json:"sub"`  // ID пользователя как UUID
+	Role   string    `json:"role"` // Роль (если нужно)
 	jwt.RegisteredClaims
 }
 
-// GenerateAccessToken создает access JWT токен
-func GenerateAccessToken(userID, role string) (string, error) {
+// GenerateAccessToken создает access-токен с UUID
+func GenerateAccessToken(userID uuid.UUID, role string) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Subject:   userID,
+			Subject:   userID.String(), // JWT требует string в subject
 		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(JwtSecretKey))
-}
-
-// GenerateRefreshToken создает refresh JWT токен
-func GenerateRefreshToken(userID string) (string, error) {
-	claims := jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenTTL)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Subject:   userID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(JwtSecretKey)
 }
 
+// GenerateRefreshToken — токен с subject как UUID (в виде строки)
+func GenerateRefreshToken(userID uuid.UUID) (string, error) {
+	claims := jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenTTL)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		Subject:   userID.String(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(JwtSecretKey)
+}
+
+// ParseAccessToken возвращает Claims c UUID внутри
 func ParseAccessToken(tokenStr string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(JwtSecretKey), nil
+		return JwtSecretKey, nil
 	})
 	if err != nil {
 		return nil, err
@@ -63,19 +67,24 @@ func ParseAccessToken(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
-// ParseRefreshToken проверяет и возвращает subject (userID)
-func ParseRefreshToken(tokenStr string) (string, error) {
+// ParseRefreshToken возвращает UUID из refresh токена
+func ParseRefreshToken(tokenStr string) (uuid.UUID, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return JwtSecretKey, nil
 	})
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok || !token.Valid {
-		return "", errors.New("invalid refresh token")
+		return uuid.Nil, errors.New("invalid refresh token")
 	}
 
-	return claims.Subject, nil
+	id, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, errors.New("invalid UUID in token subject")
+	}
+
+	return id, nil
 }
