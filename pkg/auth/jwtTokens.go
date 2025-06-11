@@ -51,17 +51,35 @@ func GenerateRefreshToken(userID uuid.UUID) (string, error) {
 }
 
 // ParseAccessToken возвращает Claims c UUID внутри
+// ParseAccessToken возвращает Claims c UUID внутри, даже если токен истёк (для refresh flow)
 func ParseAccessToken(tokenStr string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return JwtSecretKey, nil
-	})
+	parser := jwt.NewParser(jwt.WithLeeway(0), jwt.WithValidMethods([]string{"HS256"}), jwt.WithoutClaimsValidation())
+
+	token, _, err := parser.ParseUnverified(tokenStr, &Claims{}) // сначала без валидации (например, чтобы вытянуть ID)
 	if err != nil {
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid access token")
+	if !ok {
+		return nil, errors.New("invalid access token claims")
+	}
+
+	// Теперь валидируем вручную с учетом того, что он может быть просрочен
+	if claims.ExpiresAt != nil && time.Now().After(claims.ExpiresAt.Time) {
+		return nil, errors.New("token is expired")
+	}
+
+	// Проверка подписи и валидности токена
+	validToken, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+		return JwtSecretKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if !validToken.Valid {
+		return nil, errors.New("invalid token signature")
 	}
 
 	return claims, nil

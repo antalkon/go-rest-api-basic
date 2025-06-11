@@ -11,5 +11,5 @@ func InitRoutes(server *httpserver.Server, m *composition.RESTModules) {
 	api := server.App().Group("/api")
 	v1Group := api.Group("/v1", middleware.RequestLogger())
 
-	v1.RegisterRoutes(v1Group, m.PingHandler, m.AuthHandler)
+	v1.RegisterRoutes(v1Group, m.PingHandler, m.AuthHandler, m.DataHandler)
 }
