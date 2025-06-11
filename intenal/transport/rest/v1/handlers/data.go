@@ -17,6 +17,16 @@ func NewDataHandler(svc *service.DataService) *DataHandler {
 	return &DataHandler{svc: svc}
 }
 
+// GetUserData godoc
+// @Summary     Get user data
+// @Description Returns username and email of the authorized user
+// @Tags        data
+// @Security    BearerAuth
+// @Produce     json
+// @Success     200 {object} res.UserData
+// @Failure     401 {object} map[string]string
+// @Failure     500 {object} map[string]string
+// @Router      /data/user [get]
 func (h *DataHandler) GetUserData(c echo.Context) error {
 	userIDRaw := c.Get("userID")
 	userUUID, ok := userIDRaw.(uuid.UUID)
