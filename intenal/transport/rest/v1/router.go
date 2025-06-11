@@ -14,6 +14,8 @@ func RegisterRoutes(g *echo.Group, hPing *handlers.PingHandler, hAuth *handlers.
 	{
 		authGroup.POST("/login", hAuth.Login)
 		authGroup.POST("/register", hAuth.Register)
+		authGroup.POST("/refresh", hAuth.Refresh)
+		authGroup.POST("/logout", hAuth.Logout)
 	}
 
 }

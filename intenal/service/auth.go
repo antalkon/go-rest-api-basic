@@ -7,6 +7,7 @@ import (
 	"backend/pkg/auth"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,6 +54,7 @@ func (s *AuthService) Register(ctx context.Context, r req.RegisterRequest) (stri
 		UserID:    userUuid,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(auth.RefreshTokenTTL),
+		Token:     refresh,
 		Revoked:   false,
 	}
 
@@ -87,6 +89,7 @@ func (s *AuthService) Login(ctx context.Context, r req.LoginRequest) (string, st
 		UserID:    user.ID,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(auth.RefreshTokenTTL),
+		Token:     refresh,
 		Revoked:   false,
 	}
 
@@ -94,4 +97,87 @@ func (s *AuthService) Login(ctx context.Context, r req.LoginRequest) (string, st
 		return "", "", err
 	}
 	return access, refresh, nil
+}
+
+func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string, string, error) {
+	fmt.Println("=== REFRESH START ===")
+	fmt.Println("Токен из куки:", refreshToken)
+
+	// 1. Парсим токен
+	userID, err := auth.ParseRefreshToken(refreshToken)
+	if err != nil {
+		fmt.Println("Ошибка парсинга токена:", err)
+		return "", "", errors.New("invalid refresh token")
+	}
+	fmt.Println("User ID из токена:", userID)
+
+	// 2. Ищем токен в БД
+	tokenData, err := s.repo.GetRefreshTokoenByToken(ctx, refreshToken)
+	if err != nil {
+		fmt.Println("Токен не найден в БД:", err)
+		return "", "", errors.New("refresh token not found")
+	}
+
+	if tokenData.Revoked {
+		fmt.Println("Токен отозван")
+		return "", "", errors.New("refresh token is revoked")
+	}
+	if tokenData.ExpiresAt.Before(time.Now()) {
+		fmt.Println("Токен истёк")
+		return "", "", errors.New("refresh token expired")
+	}
+	fmt.Println("Токен действителен")
+
+	// 3. Находим пользователя
+	user, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		fmt.Println("Пользователь не найден:", err)
+		return "", "", errors.New("user not found")
+	}
+	fmt.Println("Пользователь найден:", user.Email)
+
+	// 4. Отзываем старый токен
+	if err := s.repo.RevokeToken(ctx, refreshToken); err != nil {
+		fmt.Println("Ошибка отзыва токена:", err)
+		return "", "", errors.New("failed to revoke old refresh token")
+	}
+	fmt.Println("Старый токен отозван")
+
+	// 5. Генерим новые токены
+	access, err := auth.GenerateAccessToken(user.ID, "user")
+	if err != nil {
+		fmt.Println("Ошибка генерации access:", err)
+		return "", "", err
+	}
+	refresh, err := auth.GenerateRefreshToken(user.ID)
+	if err != nil {
+		fmt.Println("Ошибка генерации refresh:", err)
+		return "", "", err
+	}
+
+	// 6. Сохраняем новый refresh токен
+	newToken := models.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(auth.RefreshTokenTTL),
+		Token:     refresh,
+		Revoked:   false,
+	}
+	if err := s.repo.SaveRefresh(ctx, newToken); err != nil {
+		fmt.Println("Ошибка сохранения нового токена:", err)
+		return "", "", err
+	}
+	fmt.Println("Новый токен сохранён")
+	fmt.Println("=== REFRESH SUCCESS ===")
+
+	return access, refresh, nil
+}
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+
+	if err := s.repo.RevokeToken(ctx, refreshToken); err != nil {
+
+	}
+
+	return nil
 }
