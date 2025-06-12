@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    container_name: myapp
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    environment:
+      APP_NAME: myapp
+      APP_VERSION: 1.0.0
+
+      HTTP_PORT: 8080
+      HTTP_USE_PREFORK_MODE: "true"
+
+      LOG_LEVEL: debug
+
+      PG_POOL_MAX: 15
+      PG_URL: postgres://postgres:postgres@postgres:5432/postgres
+
+      GRPC_PORT: 50051
+
+      RMQ_RPC_SERVER: server.exchange
+      RMQ_RPC_CLIENT: client.exchange
+      RMQ_URL: amqp://guest:guest@rabbitmq:5672/
+
+      METRICS_ENABLED: "true"
+      SWAGGER_ENABLED: "true"
+
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: uploads
+      S3_USE_SSL: "false"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    volumes:
+      - miniodata:/data
+
+  
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
